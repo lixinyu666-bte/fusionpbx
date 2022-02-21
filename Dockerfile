@@ -15,15 +15,16 @@ RUN apt-get update \
 		nginx \
 		php5 php5-cli php5-fpm php5-pgsql php5-sqlite php5-odbc php5-curl php5-imap php5-mcrypt wget curl openssh-server supervisor net-tools\
 	&& apt-get clean \
-	&& git clone https://github.com/fusionpbx/fusionpbx.git /var/www/fusionpbx 
+	&& git clone https://github.com/fusionpbx/fusionpbx.git /var/www/fusionpbx
 
 RUN chown -R www-data:www-data /var/www/fusionpbx
-RUN wget https://raw.githubusercontent.com/fusionpbx/fusionpbx-install.sh/master/debian/resources/nginx/fusionpbx -O /etc/nginx/sites-available/fusionpbx && ln -s /etc/nginx/sites-available/fusionpbx /etc/nginx/sites-enabled/fusionpbx \
+COPY fusionpbx /etc/nginx/sites-available/fusionpbx
+RUN ln -s /etc/nginx/sites-available/fusionpbx /etc/nginx/sites-enabled/fusionpbx \
 	&& ln -s /etc/ssl/private/ssl-cert-snakeoil.key /etc/ssl/private/nginx.key \
 	&& ln -s /etc/ssl/certs/ssl-cert-snakeoil.pem /etc/ssl/certs/nginx.crt \
 	&& rm /etc/nginx/sites-enabled/default
 RUN curl https://files.freeswitch.org/repo/deb/debian/freeswitch_archive_g0.pub | apt-key add - \
-	&& echo "deb http://files.freeswitch.org/repo/deb/freeswitch-1.6/ jessie main" > /etc/apt/sources.list.d/freeswitch.list \
+	&& echo "deb http://files.freeswitch.org/repo/deb/freeswitch-1.8/ bullseye main" > /etc/apt/sources.list.d/freeswitch.list \
 	&& apt-get update
 RUN apt-get install -y --force-yes memcached freeswitch-meta-bare freeswitch-conf-vanilla freeswitch-sysvinit freeswitch-mod-commands freeswitch-meta-codecs \
 	freeswitch-mod-console freeswitch-mod-logfile freeswitch-mod-distributor freeswitch-lang-en freeswitch-mod-say-en freeswitch-sounds-en-us-callie \
@@ -50,7 +51,7 @@ RUN usermod -a -G freeswitch www-data \
 	&& chown -R freeswitch:freeswitch /var/log/freeswitch \
 	&& chmod -R ug+rw /var/log/freeswitch \
 	&& find /var/log/freeswitch -type d -exec chmod 2770 {} \;
-ENV PSQL_PASSWORD="psqlpass"  
+ENV PSQL_PASSWORD="psqlpass"
 RUN password=$(dd if=/dev/urandom bs=1 count=20 2>/dev/null | base64) \
 	&& apt-get install -y --force-yes sudo postgresql \
 	&& apt-get clean
@@ -62,15 +63,9 @@ RUN service postgresql start \
         && echo "psql -c \"CREATE ROLE freeswitch WITH SUPERUSER LOGIN PASSWORD '$PSQL_PASSWORD'\";" | su - postgres \
         && echo "psql -c \"GRANT ALL PRIVILEGES ON DATABASE fusionpbx to fusionpbx\";"  | su - postgres \
         && echo "psql -c \"GRANT ALL PRIVILEGES ON DATABASE freeswitch to fusionpbx\";" | su - postgres \
-        && echo "psql -c \"GRANT ALL PRIVILEGES ON DATABASE freeswitch to freeswitch\";" | su - postgres 
+        && echo "psql -c \"GRANT ALL PRIVILEGES ON DATABASE freeswitch to freeswitch\";" | su - postgres
 USER root
 COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 COPY start-freeswitch.sh /usr/bin/start-freeswitch.sh
 VOLUME ["/var/lib/postgresql", "/etc/freeswitch", "/var/lib/freeswitch", "/usr/share/freeswitch", "/var/www/fusionpbx"]
 CMD /usr/bin/supervisord -n
-
-
-
-
-
-

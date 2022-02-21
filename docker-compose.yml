@@ -1,0 +1,9 @@
+# This file extends dockercompose.yml
+version: "3"
+
+services:
+  xswitchlua:
+    container_name: "xswitchlua"
+    image: ccr.ccs.tencentyun.com/free/fusionpbx
+    network_mode: host
+    restart: always
